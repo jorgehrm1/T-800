@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg: #101B1D;
+  --panel: #16262A;
+  --panel-2: #1D3034;
+  --line: #26393D;
+  --text: #EDEBE3;
+  --muted: #8FA3A6;
+  --gold: #C9A44C;     /* color del logo: acción principal */
+  --amber: #E8A33D;    /* le deben / parcial */
+  --green: #4C9A6A;    /* ganancia / pagado */
+  --red: #D0705F;      /* pérdida / pendiente / stock bajo */
+  --focus: #5B9BB0;
+  --radius: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html,body,#root{ min-height:100%; }
+body{
+  margin:0; background: var(--bg); color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif; font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3,.display{ font-family: 'Space Grotesk','Inter',sans-serif; font-weight:700; letter-spacing:-0.01em; margin:0; }
+h2{ font-size: 22px; }
+button, input, select, textarea{ font-family: inherit; font-size: 16px; }
+
+/* ---------- Estructura ---------- */
+.app-shell{ display:flex; flex-direction:column; min-height:100vh; }
+.topbar{
+  display:flex; align-items:center; gap:10px;
+  padding: calc(12px + var(--safe-top)) 16px 12px;
+  border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:10; background: var(--bg);
+}
+.top-logo{ border-radius: 8px; background:#fff; }
+.brand{ font-size:18px; color: var(--gold); }
+.rol-badge{ font-size:11px; text-transform:uppercase; letter-spacing:.07em; color: var(--muted); }
+.content{
+  flex:1; width:100%; max-width:720px; margin:0 auto;
+  padding: 16px 16px calc(92px + var(--safe-bottom));
+}
+.bottom-nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:10;
+  display:flex; background: var(--panel); border-top:1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+}
+.bottom-nav a{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding: 9px 2px 8px; font-size:11px; color: var(--muted); text-decoration:none;
+}
+.bottom-nav a.active{ color: var(--gold); }
+
+/* ---------- Login ---------- */
+.login{ max-width:360px; margin:0 auto; padding: calc(12vh + var(--safe-top)) 20px 40px; text-align:left; }
+.login-logo{ border-radius: 20px; background:#fff; margin-bottom: 16px; }
+
+/* ---------- Tarjetas y números ---------- */
+.card{ background: var(--panel); border:1px solid var(--line); border-radius: var(--radius); padding:14px; margin-bottom:12px; }
+.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px; }
+.stat{ background: var(--panel); border:1px solid var(--line); border-radius: var(--radius); padding:12px; }
+.stat .num{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; }
+.stat .label, .resultado .label{ font-size:11.5px; color: var(--muted); margin-top:3px; }
+.resultado{ border-radius: var(--radius); padding:16px; margin: 14px 0 12px; border:1px solid; }
+.resultado .num{ font-size: 32px; line-height:1.15; margin: 2px 0; }
+.resultado.gana{ background: rgba(76,154,106,.12); border-color: rgba(76,154,106,.45); }
+.resultado.gana .num{ color: var(--green); }
+.resultado.pierde{ background: rgba(208,112,95,.12); border-color: rgba(208,112,95,.45); }
+.resultado.pierde .num{ color: var(--red); }
+
+.row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.clickable{ cursor:pointer; }
+.list-item{ padding:10px 0; border-bottom:1px solid var(--line); }
+.list-item:last-child{ border-bottom:none; }
+.muted{ color: var(--muted); font-size:13px; }
+.detail-line{ display:flex; justify-content:space-between; gap:10px; font-size:14px; padding:5px 0; }
+.detalle{ margin-top:10px; border-top:1px solid var(--line); padding-top:10px; }
+.section-title{ font-size:12px; text-transform:uppercase; letter-spacing:.07em; color: var(--muted); margin: 20px 0 8px; }
+.error{ color: var(--red); font-size:13.5px; }
+.ok{ color: var(--green); font-size:13.5px; }
+.anulada-card{ opacity:.55; }
+
+.tag{ display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:100px; text-transform:uppercase; letter-spacing:.03em; }
+.tag.pagado{ background: rgba(76,154,106,.18); color: var(--green); }
+.tag.parcial{ background: rgba(232,163,61,.18); color: var(--amber); }
+.tag.pendiente{ background: rgba(208,112,95,.18); color: var(--red); }
+.tag.anulada{ background: rgba(143,163,166,.18); color: var(--muted); }
+
+/* ---------- Formularios ---------- */
+form{ display:flex; flex-direction:column; gap:10px; }
+label{ font-size:12px; color: var(--muted); margin-bottom:3px; display:block; }
+input, select, textarea{
+  width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text);
+  border-radius:9px; padding: 11px 12px; min-height: 44px;
+}
+select:disabled{ opacity:.75; }
+input:focus, select:focus, textarea:focus, button:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+button{
+  background: var(--gold); color:#16120A; border:none; border-radius:9px;
+  padding: 11px 14px; min-height:44px; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+button.secondary{ background:transparent; border:1px solid var(--line); color: var(--text); }
+button.small{ min-height:40px; padding: 8px 12px; font-size:14px; }
+button:disabled{ opacity:.5; cursor:not-allowed; }
+.link-danger{ background:none; color: var(--red); min-height:auto; padding:8px 0 0; font-size:13px; font-weight:500; }
+.icon-btn{ background:transparent; color: var(--muted); border:1px solid var(--line); min-height:44px; width:40px; padding:0; font-size:20px; align-self:flex-end; }
+
+.chips{ display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+.chip{ background: var(--panel); color: var(--muted); border:1px solid var(--line); min-height:36px; padding: 6px 13px; border-radius:100px; font-size:13.5px; font-weight:500; }
+.chip.on{ background: var(--gold); color:#16120A; border-color: var(--gold); }
+
+.lineas{ display:flex; flex-direction:column; gap:10px; }
+.linea{ display:grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr) 40px; gap:6px; align-items:end; }
+
+/* ---------- PDF ---------- */
+.pdf-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.pdf-btn{
+  display:flex; align-items:center; gap:10px; text-align:left; white-space:normal;
+  background: var(--panel); color: var(--text); border:1px solid var(--line); padding:12px;
+}
+.pdf-btn small{ display:block; color: var(--muted); font-weight:400; font-size:12px; margin-top:2px; }
+.pdf-ico{ flex:none; font-size:10px; font-weight:700; color:#fff; background: #B2402F; border-radius:5px; padding: 5px 5px; }
+
+/* ---------- Tablas ---------- */
+.tabla-scroll{ overflow-x:auto; padding: 4px 8px; }
+table{ width:100%; border-collapse:collapse; font-size:14px; }
+th,td{ text-align:left; padding: 9px 6px; border-bottom:1px solid var(--line); white-space:nowrap; }
+tr:last-child td{ border-bottom:none; }
+th{ color: var(--muted); font-weight:500; font-size:11.5px; text-transform:uppercase; }
+.r{ text-align:right; }

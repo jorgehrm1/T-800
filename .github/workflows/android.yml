@@ -1,0 +1,60 @@
+# Compila el APK de T-800 automáticamente cada vez que subes cambios a GitHub.
+# El APK queda en la pestaña "Releases" del repositorio, listo para descargar en el celular.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar la app web
+        run: npm run build
+
+      - name: Copiar la app web al proyecto Android
+        run: npx cap sync android
+
+      - name: Compilar APK firmado
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../T-800.apk
+
+      - name: Guardar APK (Actions → Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: T-800-apk
+          path: T-800.apk
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.${{ github.run_number }}
+          name: T-800 versión 2.0.${{ github.run_number }}
+          body: APK de T-800. Descarga T-800.apk desde el celular e instálalo.
+          files: T-800.apk
+          make_latest: true

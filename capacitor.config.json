@@ -1,0 +1,8 @@
+{
+  "appId": "gt.t800.app",
+  "appName": "T-800",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -28,6 +28,9 @@ export default function Inventario() {
   }
   useEffect(() => { cargar() }, [])
 
+  // un vendedor solo ve su ubicación (la base de datos tampoco le entrega las demás)
+  const veTodo = puedeMover
+  const columnas = veTodo ? cat.ubicaciones : cat.ubicaciones.filter(u => u.id === profile?.ubicacion_id)
   const total = (pid) => Number(bodega[pid] || 0) + cat.ubicaciones.reduce((a, u) => a + Number(ubic[`${u.id}|${pid}`] || 0), 0)
 
   return (
@@ -41,22 +44,22 @@ export default function Inventario() {
       <div className="card tabla-scroll" style={{ marginTop: 12 }}>
         <table>
           <thead>
-            <tr><th>Producto</th><th className="r">Bodega</th>{cat.ubicaciones.map(u => <th key={u.id} className="r">{u.nombre}</th>)}<th className="r">Total</th></tr>
+            <tr><th>Producto</th>{veTodo && <th className="r">Bodega</th>}{columnas.map(u => <th key={u.id} className="r">{u.nombre}</th>)}{veTodo && <th className="r">Total</th>}</tr>
           </thead>
           <tbody>
             {cat.productos.map(p => (
               <tr key={p.id}>
                 <td><strong>{p.nombre}</strong></td>
-                <td className="r" style={{ color: p.stock_minimo > 0 && bodega[p.id] <= p.stock_minimo ? 'var(--red)' : undefined }}>{n(bodega[p.id])}</td>
-                {cat.ubicaciones.map(u => <td key={u.id} className="r">{n(ubic[`${u.id}|${p.id}`])}</td>)}
-                <td className="r"><strong>{n(total(p.id))}</strong></td>
+                {veTodo && <td className="r" style={{ color: p.stock_minimo > 0 && bodega[p.id] <= p.stock_minimo ? 'var(--red)' : undefined }}>{n(bodega[p.id])}</td>}
+                {columnas.map(u => <td key={u.id} className="r">{n(ubic[`${u.id}|${p.id}`])}</td>)}
+                {veTodo && <td className="r"><strong>{n(total(p.id))}</strong></td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="section-title">Últimos movimientos</div>
+      <div className="section-title">{veTodo ? 'Últimos movimientos' : 'Lo que me han cargado o devuelto'}</div>
       <div className="card">
         {movs.length === 0 && <p className="muted">Sin movimientos.</p>}
         {movs.map(m => (

@@ -70,6 +70,8 @@ button, input, select, textarea{ font-family: inherit; font-size: 16px; }
 .resultado.gana .num{ color: var(--green); }
 .resultado.pierde{ background: rgba(208,112,95,.12); border-color: rgba(208,112,95,.45); }
 .resultado.pierde .num{ color: var(--red); }
+.resultado.neutro{ background: rgba(201,164,76,.10); border-color: rgba(201,164,76,.45); }
+.resultado.neutro .num{ color: var(--gold); }
 
 .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .clickable{ cursor:pointer; }

@@ -190,10 +190,10 @@ export function pdfCompras(compras, desde, hasta) {
   })
 }
 
-export function pdfVentas(ventas, desde, hasta) {
+export function pdfVentas(ventas, desde, hasta, ubicacion) {
   const lista = ventas.filter(v => !v.anulada)
   return pdfListado({
-    titulo: 'Reporte de ventas', base: 'Ventas', desde, hasta,
+    titulo: ubicacion ? `Reporte de ventas · ${ubicacion}` : 'Reporte de ventas', base: ubicacion ? `Ventas_${ubicacion}` : 'Ventas', desde, hasta,
     head: ['Fecha', 'Cliente', 'Ubicación', 'Total', 'Cobrado', 'Saldo', 'Estado'],
     body: lista.map(v => [fechaBonita(v.fecha), v.cliente, v.ubicacion, q(v.total), q(v.cobrado), q(v.saldo), v.estado_pago]),
     foot: ['', 'TOTAL', '', q(suma(lista, 'total')), q(suma(lista, 'cobrado')), q(suma(lista, 'saldo')), ''],
@@ -201,10 +201,10 @@ export function pdfVentas(ventas, desde, hasta) {
   })
 }
 
-export function pdfGastos(gastos, desde, hasta) {
+export function pdfGastos(gastos, desde, hasta, ubicacion) {
   const lista = gastos.filter(g => !g.anulado)
   return pdfListado({
-    titulo: 'Reporte de gastos', base: 'Gastos', desde, hasta,
+    titulo: ubicacion ? `Reporte de gastos · ${ubicacion}` : 'Reporte de gastos', base: ubicacion ? `Gastos_${ubicacion}` : 'Gastos', desde, hasta,
     head: ['Fecha', 'Categoría', 'Descripción', 'Ubicación', 'Monto'],
     body: lista.map(g => [fechaBonita(g.fecha), g.categoria, g.descripcion || '', g.ubicaciones?.nombre || 'General', q(g.monto)]),
     foot: ['', 'TOTAL', '', '', q(suma(lista, 'monto'))],
@@ -212,23 +212,30 @@ export function pdfGastos(gastos, desde, hasta) {
   })
 }
 
-export async function pdfCuentas(porCobrar, porPagar, fecha) {
-  const doc = await nuevoDoc('Cuentas por cobrar y por pagar', fecha, fecha)
+// porPagar = null -> solo cuentas por cobrar (vista de un vendedor)
+export async function pdfCuentas(porCobrar, porPagar, fecha, ubicacion) {
+  const soloCobrar = porPagar == null
+  const titulo = soloCobrar ? `Cuentas por cobrar${ubicacion ? ' · ' + ubicacion : ''}` : 'Cuentas por cobrar y por pagar'
+  const doc = await nuevoDoc(titulo, fecha, fecha)
   let y = subtitulo(doc, 'Le deben (cuentas por cobrar)', 40)
   autoTable(doc, {
     ...tablaBase, startY: y,
     head: [['Fecha', 'Cliente', 'Ubicación', 'Total', 'Saldo']],
-    body: porCobrar.map(v => [fechaBonita(v.fecha), v.cliente, v.ubicacion, q(v.total), q(v.saldo)]),
+    body: porCobrar.length ? porCobrar.map(v => [fechaBonita(v.fecha), v.cliente, v.ubicacion, q(v.total), q(v.saldo)])
+      : [[{ content: 'Nadie debe nada', colSpan: 5, styles: { halign: 'center', textColor: 120 } }]],
     foot: [['', 'TOTAL', '', '', q(suma(porCobrar, 'saldo'))]],
     columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } },
   })
-  y = subtitulo(doc, 'Debe (cuentas por pagar a proveedores)', sigY(doc, 10))
-  autoTable(doc, {
-    ...tablaBase, startY: y,
-    head: [['Fecha', 'Proveedor', 'Factura', 'Total', 'Saldo']],
-    body: porPagar.map(c => [fechaBonita(c.fecha), c.proveedor, c.num_factura || '', q(c.total), q(c.saldo)]),
-    foot: [['', 'TOTAL', '', '', q(suma(porPagar, 'saldo'))]],
-    columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } },
-  })
-  await guardarPDF(doc, `T800_Cuentas_${fecha}.pdf`)
+  if (!soloCobrar) {
+    y = subtitulo(doc, 'Debe (cuentas por pagar a proveedores)', sigY(doc, 10))
+    autoTable(doc, {
+      ...tablaBase, startY: y,
+      head: [['Fecha', 'Proveedor', 'Factura', 'Total', 'Saldo']],
+      body: porPagar.length ? porPagar.map(c => [fechaBonita(c.fecha), c.proveedor, c.num_factura || '', q(c.total), q(c.saldo)])
+        : [[{ content: 'No se debe nada a proveedores', colSpan: 5, styles: { halign: 'center', textColor: 120 } }]],
+      foot: [['', 'TOTAL', '', '', q(suma(porPagar, 'saldo'))]],
+      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } },
+    })
+  }
+  await guardarPDF(doc, `T800_${soloCobrar ? 'PorCobrar' : 'Cuentas'}${ubicacion ? '_' + ubicacion : ''}_${fecha}.pdf`)
 }

@@ -20,11 +20,16 @@ como página web. Datos en Supabase (proyecto **Moroni**), costo $0/mes.
 - **Anular** compras, ventas o gastos mal registrados (solo admin). El
   inventario se corrige solo.
 
-| Rol | Puede |
-|---|---|
-| admin | Todo, incluso anular |
-| bodega | Compras, pagos a proveedores, mover inventario, ventas desde cualquier ubicación, gastos |
-| vendedor | Ventas y cobros solo desde su ubicación, gastos, ver inventario y reportes |
+| Rol | Usuarios | Puede |
+|---|---|---|
+| admin | jorge | Todo el negocio, incluso anular |
+| bodega | moroni | Todo el negocio: compras, pagos a proveedores, mover inventario, ventas desde cualquier ubicación, gastos |
+| vendedor | camion, terminal, floresta | **Solo su ubicación**: sus ventas y cobros, lo que le deben, sus gastos y el inventario de su ubicación. No ve compras, proveedores, bodega, costos, ganancias ni los totales del negocio |
+
+La restricción de los vendedores está en la base de datos (RLS), no solo en
+la pantalla: aunque alguien intente consultar los datos directamente, la base
+no le entrega lo de otras ubicaciones. Los costos viven en tablas aparte
+(`costos_producto`, `venta_detalle_costo`) que solo admin y bodega pueden leer.
 
 ---
 
@@ -41,8 +46,11 @@ conserva tus 4 cuentas y tus 9 productos:
 4. Recomendado: **Authentication → Sign In / Providers → Email** y apaga
    **"Allow new users to sign up"**, así nadie puede crear cuentas desde fuera.
 
-> Instalación desde cero en otro proyecto: usa `sql/schema.sql` en lugar de
-> la migración y crea usuarios con
+> Ya aplicadas en Moroni: `migracion_v1_a_v2.sql` (oct-04) y
+> `migracion_v2_a_v3.sql` (oct-10, vendedores solo ven su ubicación).
+>
+> Instalación desde cero en otro proyecto: corre `sql/schema.sql` y luego
+> `sql/migracion_v2_a_v3.sql`, y crea usuarios con
 > `select crear_usuario('camion','Clave-Segura','Vendedor Camión','vendedor','Camión');`
 
 ## Paso 2 — Subir a GitHub (el APK se compila solo)
@@ -104,6 +112,7 @@ listo (las claves públicas ya están en `.env.production`).
 ```
 sql/schema.sql                 Esquema completo (instalación nueva)
 sql/migracion_v1_a_v2.sql      Actualización desde la v1
+sql/migracion_v2_a_v3.sql      Vendedores solo ven su ubicación
 src/                           App (React)
 src/lib/pdf.js                 Reportes PDF
 android/                       Proyecto Android (Capacitor)

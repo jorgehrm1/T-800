@@ -58,7 +58,7 @@ const tablaBase = {
   // montos alineados a la derecha también en encabezados y totales
   didParseCell: (d) => {
     if (d.section === 'foot' && /^-?Q[\d,]/.test(String(d.cell.raw))) d.cell.styles.halign = 'right'
-    if (d.section === 'head' && d.table.columns[d.column.index]?.index !== 0 && /Monto|Total|Pagado|Saldo|Cobrado|Ventas|Costo|Ganancia|Cantidad/.test(String(d.cell.raw))) d.cell.styles.halign = 'right'
+    if (d.section === 'head' && d.table.columns[d.column.index]?.index !== 0 && /Monto|Total|Pagado|Saldo|Cobrado|Ventas|Costo|Ganancia|Cantidad|Precio|Subtotal/.test(String(d.cell.raw))) d.cell.styles.halign = 'right'
   },
 }
 
@@ -238,4 +238,123 @@ export async function pdfCuentas(porCobrar, porPagar, fecha, ubicacion) {
     })
   }
   await guardarPDF(doc, `T800_${soloCobrar ? 'PorCobrar' : 'Cuentas'}${ubicacion ? '_' + ubicacion : ''}_${fecha}.pdf`)
+}
+
+// =====================================================================
+// PDF PARA COMPARTIR CON CLIENTES Y PROVEEDORES
+// (sin costos ni datos internos del negocio)
+// =====================================================================
+const referencia = (id) => String(id || '').slice(0, 8).toUpperCase()
+const hoyLocal = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const ordenPagos = (a, b) => (a.fecha + (a.creado_en || '')).localeCompare(b.fecha + (b.creado_en || ''))
+const archivo = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')
+
+// Datos de la parte (cliente o proveedor) en dos columnas
+function bloqueDatos(doc, filas, y) {
+  doc.setFontSize(10)
+  filas.forEach(([etq, val], i) => {
+    const x = i % 2 === 0 ? 14 : 110
+    const yy = y + Math.floor(i / 2) * 6
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(110); doc.text(`${etq}:`, x, yy)
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(...OSCURO); doc.text(String(val ?? ''), x + doc.getTextWidth(`${etq}: `) + 1, yy)
+  })
+  return y + Math.ceil(filas.length / 2) * 6 + 2
+}
+
+// Recuadro grande con el saldo: verde si está pagado, rojo si hay pendiente
+function recuadroSaldo(doc, y, saldo, textoPendiente) {
+  const pagado = Number(saldo) <= 0.004
+  doc.setFillColor(...(pagado ? VERDE : ROJO))
+  doc.roundedRect(14, y, 188, 16, 2, 2, 'F')
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12); doc.text(pagado ? 'PAGADO EN SU TOTALIDAD' : textoPendiente, 20, y + 10)
+  doc.setFontSize(15); doc.text(q(pagado ? 0 : saldo), 196, y + 10.5, { align: 'right' })
+  return y + 24
+}
+
+// Comprobante de UNA venta o compra con su historial de pagos.
+// tipo: 'venta' | 'compra'; op: fila de v_ventas / v_compras
+export async function pdfComprobante(tipo, op, detalle, pagos) {
+  const esVenta = tipo === 'venta'
+  const parte = esVenta ? op.cliente : op.proveedor
+  const doc = await nuevoDoc(esVenta ? 'Estado de cuenta de venta' : 'Estado de cuenta de compra', hoyLocal(), hoyLocal())
+
+  const datos = [[esVenta ? 'Cliente' : 'Proveedor', parte], ['Referencia', referencia(op.id)], ['Fecha de la ' + tipo, fechaBonita(op.fecha)]]
+  if (esVenta && op.ubicacion) datos.push(['Despachado desde', op.ubicacion])
+  if (!esVenta && op.num_factura) datos.push(['No. factura', op.num_factura])
+  let y = bloqueDatos(doc, datos, 40)
+
+  y = recuadroSaldo(doc, y + 2, op.saldo, esVenta ? 'SALDO PENDIENTE DE PAGO' : 'SALDO PENDIENTE A PAGAR')
+
+  y = subtitulo(doc, 'Detalle', y)
+  autoTable(doc, {
+    ...tablaBase, startY: y,
+    head: [['Producto', 'Cantidad', 'Precio', 'Subtotal']],
+    body: detalle.map(d => [d.productos?.nombre || '', Number(d.cantidad).toLocaleString('es-GT'), q(d.precio_unitario), q(d.subtotal)]),
+    foot: [['TOTAL', '', '', q(op.total)]],
+    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+  })
+
+  y = subtitulo(doc, 'Historial de pagos', sigY(doc))
+  const lista = [...pagos].sort(ordenPagos)
+  let restante = Number(op.total)
+  autoTable(doc, {
+    ...tablaBase, startY: y,
+    head: [['#', 'Fecha', 'Forma de pago', 'Monto pagado', 'Saldo después']],
+    body: lista.length
+      ? lista.map((p, i) => { restante -= Number(p.monto); return [i + 1, fechaBonita(p.fecha), p.metodo_pago || 'efectivo', q(p.monto), q(Math.max(restante, 0))] })
+      : [[{ content: 'Aún no se ha registrado ningún pago', colSpan: 5, styles: { halign: 'center', textColor: 120 } }]],
+    foot: [['', '', 'TOTAL PAGADO', q(suma(lista, 'monto')), q(op.saldo)]],
+    columnStyles: { 0: { cellWidth: 10 }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+  })
+
+  y = sigY(doc, 10)
+  autoTable(doc, {
+    ...tablaBase, startY: y, theme: 'plain', tableWidth: 90, margin: { left: 112 },
+    body: [['Total', q(op.total)], ['Pagado', q(suma(lista, 'monto'))], [{ content: 'Saldo pendiente', styles: { fontStyle: 'bold' } }, { content: q(op.saldo), styles: { fontStyle: 'bold' } }]],
+    columnStyles: { 1: { halign: 'right' } }, styles: { fontSize: 10, cellPadding: 1.5 },
+  })
+
+  await guardarPDF(doc, `T800_${esVenta ? 'Venta' : 'Compra'}_${archivo(parte)}_${referencia(op.id)}.pdf`)
+}
+
+// Estado de cuenta de un cliente o proveedor: todo lo que tiene pendiente
+// ops: filas de v_ventas / v_compras con saldo; pagos: de todas esas operaciones
+export async function pdfEstadoCuenta(tipo, nombreParte, ops, pagos) {
+  const esVenta = tipo === 'venta'
+  const doc = await nuevoDoc('Estado de cuenta', hoyLocal(), hoyLocal())
+  const totalSaldo = suma(ops, 'saldo')
+  let y = bloqueDatos(doc, [[esVenta ? 'Cliente' : 'Proveedor', nombreParte], ['Operaciones pendientes', ops.length]], 40)
+  y = recuadroSaldo(doc, y + 2, totalSaldo, esVenta ? 'TOTAL PENDIENTE DE PAGO' : 'TOTAL PENDIENTE A PAGAR')
+
+  y = subtitulo(doc, esVenta ? 'Ventas con saldo pendiente' : 'Compras con saldo pendiente', y)
+  autoTable(doc, {
+    ...tablaBase, startY: y,
+    head: [['Fecha', 'Referencia', esVenta ? 'Despachado desde' : 'Factura', 'Total', 'Pagado', 'Saldo']],
+    body: ops.length
+      ? ops.map(o => [fechaBonita(o.fecha), referencia(o.id), (esVenta ? o.ubicacion : o.num_factura) || '', q(o.total), q(esVenta ? o.cobrado : o.pagado), q(o.saldo)])
+      : [[{ content: 'No hay saldos pendientes', colSpan: 6, styles: { halign: 'center', textColor: 120 } }]],
+    foot: [['', 'TOTAL', '', q(suma(ops, 'total')), q(suma(ops, esVenta ? 'cobrado' : 'pagado')), q(totalSaldo)]],
+    columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+  })
+
+  if (ops.length) {
+    const ref = Object.fromEntries(ops.map(o => [o.id, referencia(o.id)]))
+    const lista = [...pagos].sort(ordenPagos)
+    y = subtitulo(doc, 'Historial de pagos', sigY(doc))
+    autoTable(doc, {
+      ...tablaBase, startY: y,
+      head: [['Fecha', 'Referencia', 'Forma de pago', 'Monto pagado']],
+      body: lista.length
+        ? lista.map(p => [fechaBonita(p.fecha), ref[esVenta ? p.venta_id : p.compra_id] || '', p.metodo_pago || 'efectivo', q(p.monto)])
+        : [[{ content: 'Aún no se ha registrado ningún pago', colSpan: 4, styles: { halign: 'center', textColor: 120 } }]],
+      foot: [['', '', 'TOTAL PAGADO', q(suma(lista, 'monto'))]],
+      columnStyles: { 3: { halign: 'right' } },
+    })
+  }
+
+  await guardarPDF(doc, `T800_EstadoCuenta_${archivo(nombreParte)}_${hoyLocal()}.pdf`)
 }

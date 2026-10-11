@@ -3,6 +3,7 @@ import { supabase, rpc } from '../supabaseClient'
 import { useAuth } from '../AuthContext'
 import { useCatalogos } from '../lib/useCatalogos'
 import { q, hoy, fechaBonita, TagEstado, msgError } from '../lib/format.jsx'
+import BotonesCuenta from '../components/BotonesCuenta'
 import Lineas, { lineaVacia, lineasValidas, totalLineas } from '../components/Lineas'
 
 export default function Ventas() {
@@ -147,7 +148,7 @@ function DetalleVenta({ venta, esAdmin, onCambio }) {
 
   useEffect(() => {
     supabase.from('venta_detalle').select('*, productos(nombre)').eq('venta_id', venta.id).then(({ data }) => setDetalle(data || []))
-    supabase.from('pagos_venta').select('*').eq('venta_id', venta.id).order('fecha').then(({ data }) => setPagos(data || []))
+    supabase.from('pagos_venta').select('*').eq('venta_id', venta.id).order('fecha').order('creado_en').then(({ data }) => setPagos(data || []))
   }, [venta.id, venta.saldo])
 
   async function cobrar(e) {
@@ -181,6 +182,7 @@ function DetalleVenta({ venta, esAdmin, onCambio }) {
         </form>
       )}
       {error && <div className="error">{error}</div>}
+      <BotonesCuenta tipo="venta" op={venta} detalle={detalle} pagos={pagos} />
       {esAdmin && !venta.anulada && <button className="link-danger" disabled={ocupado} onClick={anular}>Anular venta</button>}
     </div>
   )

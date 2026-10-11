@@ -3,6 +3,7 @@ import { supabase, rpc } from '../supabaseClient'
 import { useAuth } from '../AuthContext'
 import { useCatalogos } from '../lib/useCatalogos'
 import { q, hoy, fechaBonita, TagEstado, msgError } from '../lib/format.jsx'
+import BotonesCuenta from '../components/BotonesCuenta'
 import Lineas, { lineaVacia, lineasValidas, totalLineas } from '../components/Lineas'
 
 export default function Compras() {
@@ -129,7 +130,7 @@ function DetalleCompra({ compra, esAdmin, onCambio }) {
 
   useEffect(() => {
     supabase.from('compra_detalle').select('*, productos(nombre)').eq('compra_id', compra.id).then(({ data }) => setDetalle(data || []))
-    supabase.from('pagos_compra').select('*').eq('compra_id', compra.id).order('fecha').then(({ data }) => setPagos(data || []))
+    supabase.from('pagos_compra').select('*').eq('compra_id', compra.id).order('fecha').order('creado_en').then(({ data }) => setPagos(data || []))
   }, [compra.id, compra.saldo])
 
   async function pagar(e) {
@@ -162,6 +163,7 @@ function DetalleCompra({ compra, esAdmin, onCambio }) {
         </form>
       )}
       {error && <div className="error">{error}</div>}
+      <BotonesCuenta tipo="compra" op={compra} detalle={detalle} pagos={pagos} />
       {esAdmin && !compra.anulada && <button className="link-danger" disabled={ocupado} onClick={anular}>Anular compra</button>}
     </div>
   )
